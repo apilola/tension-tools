@@ -20,7 +20,10 @@ public class TensionData : MonoBehaviour
         Manual       
     }
 
-    [SerializeField, HideInInspector] SkinnedMeshRenderer skinnedMeshRenderer;
+    [SerializeField, HideInInspector] SkinnedMeshRenderer m_SkinnedMeshRenderer;
+
+    public SkinnedMeshRenderer Renderer => m_SkinnedMeshRenderer;
+
     MaterialPropertyBlock m_MaterialPropertyBlock;
 
     int _VertexBufferStride, _VertexCount;
@@ -92,8 +95,8 @@ public class TensionData : MonoBehaviour
 
     private void OnValidate()
     {
-        if (skinnedMeshRenderer == null)
-        skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
+        if (m_SkinnedMeshRenderer == null)
+        m_SkinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
         if (m_MaterialPropertyBlock == null)
             m_MaterialPropertyBlock = new MaterialPropertyBlock();
         if (!isSetUp)
@@ -109,8 +112,8 @@ public class TensionData : MonoBehaviour
     private void Start()
     {
         Debug.Log("Awake Called");
-        if (skinnedMeshRenderer == null)
-            skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
+        if (m_SkinnedMeshRenderer == null)
+            m_SkinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
         if (m_MaterialPropertyBlock == null)
             m_MaterialPropertyBlock = new MaterialPropertyBlock();
         //skinnedMeshRenderer.re
@@ -122,7 +125,15 @@ public class TensionData : MonoBehaviour
             return;
         UpdateVertexBuffer();       
     }
+    private void OnEnable()
+    {
+        SetUp();
+    }
 
+    private void OnDisable()
+    {
+        TearDown();
+    }
     private void OnDestroy()
     {
         TearDown();
@@ -151,13 +162,13 @@ public class TensionData : MonoBehaviour
 
     bool CanSetUp()
     {
-        if (skinnedMeshRenderer == null)
-            Debug.Log($"{nameof(CanSetUp)} : {skinnedMeshRenderer != null}");
-        if (skinnedMeshRenderer == null)
-            Debug.Log($"{nameof(CanSetUp)} skinnedMeshRenderer.sharedMaterial != null: {skinnedMeshRenderer.sharedMaterial != null}");
-        if (skinnedMeshRenderer == null)
-            Debug.Log($"{nameof(CanSetUp)} skinnedMeshRenderer.sharedMesh != null: {skinnedMeshRenderer.sharedMesh != null}");
-        return skinnedMeshRenderer != null && skinnedMeshRenderer.sharedMaterial != null && skinnedMeshRenderer.sharedMesh != null;
+        if (m_SkinnedMeshRenderer == null)
+            Debug.Log($"{nameof(CanSetUp)} : {m_SkinnedMeshRenderer != null}");
+        if (m_SkinnedMeshRenderer == null)
+            Debug.Log($"{nameof(CanSetUp)} skinnedMeshRenderer.sharedMaterial != null: {m_SkinnedMeshRenderer.sharedMaterial != null}");
+        if (m_SkinnedMeshRenderer == null)
+            Debug.Log($"{nameof(CanSetUp)} skinnedMeshRenderer.sharedMesh != null: {m_SkinnedMeshRenderer.sharedMesh != null}");
+        return m_SkinnedMeshRenderer != null && m_SkinnedMeshRenderer.sharedMaterial != null && m_SkinnedMeshRenderer.sharedMesh != null;
     }
 
 
@@ -177,21 +188,19 @@ public class TensionData : MonoBehaviour
     {
         if (!CanSetUp() || isSetUp)
         {
-            Debug.Log($"SetUp Failed: {isSetUp}");
             return;
         }
-        var mesh = skinnedMeshRenderer.sharedMesh;
+        var mesh = m_SkinnedMeshRenderer.sharedMesh;
         var tris = mesh.triangles;
         var vertexCount = mesh.vertexCount;
         _EdgeBuffer = SetUpEdgeBuffer(tris, vertexCount);
-        _BaseEdgeBuffer = SetUpBaseEdgeBuffer(skinnedMeshRenderer);
+        _BaseEdgeBuffer = SetUpBaseEdgeBuffer(m_SkinnedMeshRenderer);
 
         if (m_MaterialPropertyBlock == null)
             m_MaterialPropertyBlock = new MaterialPropertyBlock();
 
         SetUpMaterialPropertyBlock(vertexCount, m_Properties, m_MaterialPropertyBlock, _EdgeBuffer, _BaseEdgeBuffer);
         isSetUp = true;
-        Debug.Log($"SetUp Succeeded");
     }
 
     [ContextMenu("TearDown")]
@@ -321,12 +330,29 @@ public class TensionData : MonoBehaviour
     private void UpdateVertexBuffer()
     {
         ReleaseBuffer(ref _VertexBuffer);
-        skinnedMeshRenderer.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
-        _VertexBuffer = skinnedMeshRenderer.GetVertexBuffer();
-        if(_VertexBuffer != null)
+        m_SkinnedMeshRenderer.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+        _VertexBuffer = m_SkinnedMeshRenderer.GetVertexBuffer();
+        if (_VertexBuffer != null)
         {
             ApplyVertexBufferToMaterialPropertyBlock(m_MaterialPropertyBlock, _VertexBuffer);
-            skinnedMeshRenderer.SetPropertyBlock(m_MaterialPropertyBlock);
+            m_SkinnedMeshRenderer.SetPropertyBlock(m_MaterialPropertyBlock);
+        }
+    }
+
+    public void ForceMaterialPropertyBlockUpdate()
+    {
+        m_SkinnedMeshRenderer.SetPropertyBlock(m_MaterialPropertyBlock);
+    }
+
+    public void RevertToPreviousVertexBuffer()
+    {
+        ReleaseBuffer(ref _VertexBuffer);
+        m_SkinnedMeshRenderer.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+        _VertexBuffer = m_SkinnedMeshRenderer.GetPreviousVertexBuffer();
+        if (_VertexBuffer != null)
+        {
+            ApplyVertexBufferToMaterialPropertyBlock(m_MaterialPropertyBlock, _VertexBuffer);
+            m_SkinnedMeshRenderer.SetPropertyBlock(m_MaterialPropertyBlock);
         }
     }
 

@@ -2,7 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-
+using UnityEngine.Rendering.Universal;
+using UnityEngine.Rendering;
+using System;
+using UnityObject = UnityEngine.Object;
+using UnityEditor.SceneManagement;
+using UnityEditor.Experimental;
+using System.Reflection;
 [CustomEditor(typeof(TensionData))]
 public class TensionDataEditor : Editor
 {
@@ -76,35 +82,45 @@ public class TensionDataEditor : Editor
         {
             m_SkinnedMeshRenderer.material = _VisualizerMaterial;
         }
+
+        if(m_RenderPass == null)
+        {
+            m_RenderPass = new DrawRendererPass();
+        }
+
+        if (EditorSettings.defaultBehaviorMode == EditorBehaviorMode.Mode2D)
+            m_PreviewDir = new Vector2(0, 0);
+        else
+        {
+            m_PreviewDir = new Vector2(120, -20);
+
+            //Fix for FogBugz case : 1364821 Inspector Model Preview orientation is reversed when Bake Axis Conversion is enabled
+            UnityObject importedObject = PrefabUtility.IsPartOfVariantPrefab(target)
+                ? PrefabUtility.GetCorrespondingObjectFromSource(target) as GameObject
+                : target;
+
+            var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(importedObject)) as ModelImporter;
+            if (importer && importer.bakeAxisConversion)
+            {
+                m_PreviewDir += new Vector2(180, 0);
+            }
+        }
     }
 
     private void OnDisable()
     {
-        if (_Visualizer)
-        {
-            m_SkinnedMeshRenderer.material = _SharedMaterial;
-        }
+
+        foreach (var previewData in m_PreviewInstances.Values)
+            previewData.Dispose();
     }
 
     public override void OnInspectorGUI()
     {
         serializedObject.Update();
-
-        var visualizerButtonRect = GUILayoutUtility.GetRect(25f, 25f);
-        EditorGUI.BeginChangeCheck();
-        _Visualizer = GUI.Toggle(new Rect(visualizerButtonRect.x, visualizerButtonRect.y, 25f, 25f), _Visualizer, Style.GetVisualizerContent(_Visualizer), GUI.skin.button);
-        if (EditorGUI.EndChangeCheck())
-        {
-            if (_Visualizer)
-                m_SkinnedMeshRenderer.material = _VisualizerMaterial;
-            else
-                m_SkinnedMeshRenderer.material = _SharedMaterial;
-        }
-
         bool tensionPropertiesHaveChanged = DoTensionProperties();
         if(tensionPropertiesHaveChanged)
         {
-            
+            m_TensionData.ForceMaterialPropertyBlockUpdate();
         }
         serializedObject.ApplyModifiedProperties();
     }
@@ -118,6 +134,7 @@ public class TensionDataEditor : Editor
             float value = EditorGUILayout.FloatField(m_SquashIntensityProp.displayName, m_SquashIntensityProp.floatValue);
             if (EditorGUI.EndChangeCheck())
             {
+                hasChanged = true;
                 m_TensionData.SetSquashIntensity(value);
             }
         }
@@ -126,6 +143,7 @@ public class TensionDataEditor : Editor
             float value = EditorGUILayout.Slider(m_SquashLimitProp.displayName, m_SquashLimitProp.floatValue, 0, 1);
             if (EditorGUI.EndChangeCheck())
             {
+                hasChanged = true;
                 m_TensionData.SetSquashLimit(value);
             }
         }
@@ -134,6 +152,7 @@ public class TensionDataEditor : Editor
             float value = EditorGUILayout.FloatField(m_StretchIntensityProp.displayName, m_StretchIntensityProp.floatValue);
             if (EditorGUI.EndChangeCheck())
             {
+                hasChanged = true;
                 m_TensionData.SetStretchIntensity(value);
             }
         }
@@ -142,9 +161,225 @@ public class TensionDataEditor : Editor
             float value = EditorGUILayout.Slider(m_StretchLimitProp.displayName, m_StretchLimitProp.floatValue, 0, 1);
             if (EditorGUI.EndChangeCheck())
             {
+                hasChanged = true;
                 m_TensionData.SetStretchLimit(value);
             }
         }
         return hasChanged;
+    }
+
+    PreviewData GetPreviewData()
+    {
+        PreviewData previewData;
+        int referenceTargetIndex = GetReferenceTargetIndex();
+        if (!m_PreviewInstances.TryGetValue(referenceTargetIndex, out previewData))
+        {
+            previewData = new PreviewData((target as TensionData).Renderer);
+            m_PreviewInstances.Add(referenceTargetIndex, previewData);
+        }
+        ReloadPreviewInstances();
+        return previewData;
+    }
+
+    class PreviewData : IDisposable
+    {
+        bool m_Disposed;
+
+        public readonly PreviewRenderUtility renderUtility;
+        public Renderer renderer { get; private set; }
+
+        public string prefabAssetPath { get; private set; }
+
+        public UniversalAdditionalCameraData cameraData { get; private set; }
+
+        public Bounds renderableBounds { get; private set; }
+
+        public Vector3 currentPosition { get; set; }
+
+        public bool useStaticAssetPreview { get; set; }
+
+        public PreviewData(Renderer renderer)
+        {
+            renderUtility = new PreviewRenderUtility();
+            renderUtility.camera.fieldOfView = 30.0f;
+            cameraData = renderUtility.camera.GetUniversalAdditionalCameraData();
+            if(cameraData == null)
+            {
+                Debug.LogError("Error: Camera Data is missing");
+            }
+            this.renderer = renderer;
+            this.renderableBounds = renderer.bounds;
+        }
+
+        public void Dispose()
+        {
+            if (m_Disposed)
+                return;
+            renderUtility.Cleanup();
+            renderer = null;
+            m_Disposed = true;
+        }
+    }
+
+    Dictionary<int, PreviewData> m_PreviewInstances = new Dictionary<int, PreviewData>();
+    private DrawRendererPass m_RenderPass;
+    Vector2 m_PreviewDir;
+    Vector3 m_CurrentVelocity;
+    float m_Zoom;
+    Rect m_PreviewRect;
+    private PropertyInfo referenceTargetIndexInfo = typeof(Editor).GetProperty("referenceTargetIndex", BindingFlags.NonPublic | BindingFlags.Instance);
+
+    private int GetReferenceTargetIndex()
+    {
+        return (int) referenceTargetIndexInfo.GetValue(this);
+    }
+
+    public static Vector2 Drag2D(Vector2 scrollPosition, Rect position, ref float zoom)
+    {
+        int controlID = GUIUtility.GetControlID("Slider".GetHashCode(), FocusType.Passive);
+        Event current = Event.current;
+        switch (current.GetTypeForControl(controlID))
+        {
+            case EventType.MouseDown:
+                if (position.Contains(current.mousePosition) && position.width > 50f)
+                {
+                    GUIUtility.hotControl = controlID;
+                    current.Use();
+                    EditorGUIUtility.SetWantsMouseJumping(1);
+                }
+                break;
+            case EventType.MouseUp:
+                if (GUIUtility.hotControl == controlID)
+                {
+                    GUIUtility.hotControl = 0;
+                }
+                EditorGUIUtility.SetWantsMouseJumping(0);
+                break;
+            case EventType.MouseDrag:
+                if (GUIUtility.hotControl == controlID)
+                {
+                    scrollPosition -= current.delta * (float)((!current.shift) ? 1 : 3) / Mathf.Min(position.width, position.height) * 140f;
+                    scrollPosition.y = Mathf.Clamp(scrollPosition.y, -90f, 90f);
+                    current.Use();
+                    GUI.changed = true;
+                }
+                break;
+            case EventType.ScrollWheel:
+                //if (GUIUtility.hotControl == controlID)
+                {
+                    zoom = Mathf.Max(current.delta.y * .5f + zoom, 0);
+                    
+                    current.Use();
+                    GUI.changed = true;
+                }
+                break;
+        }
+        return scrollPosition;
+    }
+
+    public override bool HasPreviewGUI()
+    {
+        return true;
+    }
+    
+    public override void OnPreviewGUI(Rect r, GUIStyle background)
+    {
+        var previewData = GetPreviewData();
+        var direction = Drag2D(m_PreviewDir, r, ref m_Zoom);
+        if (direction != m_PreviewDir)
+        {
+            m_PreviewDir = direction;
+        }
+
+        if (Event.current.type != EventType.Repaint)
+            return;
+
+        if (m_PreviewRect != r)
+        {
+            m_PreviewRect = r;
+        }
+
+        var previewUtility = previewData.renderUtility;
+        previewUtility.BeginPreview(r, background);
+        DoRenderPreview(previewData);
+        previewUtility.EndAndDrawPreview(r);
+        /*
+        previewUtility.BeginPreview(r, previewBackground: GUIStyle.none);
+        m_RenderPass.SetRenderer((target as TensionData).Renderer);
+        if(!m_CameraData)
+        {
+            Debug.Log("Camera Data is missing");
+        }
+        else
+        {
+        }
+        m_CameraData.scriptableRenderer.EnqueuePass(m_RenderPass);
+        previewUtility.Render(true);
+        var texture = previewUtility.EndPreview();
+        GUI.DrawTexture(r, texture);*/
+
+        if(m_CurrentVelocity != Vector3.zero)
+        {
+            Repaint();
+        }
+    }
+
+    private void DoRenderPreview(PreviewData previewData)
+    {
+        var bounds = previewData.renderableBounds;
+        float halfSize = Mathf.Max(bounds.extents.magnitude, 0.0001f);
+        float distance = halfSize * (3.8f + m_Zoom);
+
+        Quaternion rot = Quaternion.Euler(-m_PreviewDir.y, -m_PreviewDir.x, 0);
+        previewData.currentPosition = Vector3.SmoothDamp(previewData.currentPosition, previewData.renderer.bounds.center, ref m_CurrentVelocity, .75f);
+        Vector3 pos = previewData.currentPosition - rot * (Vector3.forward * distance);
+
+        previewData.renderUtility.camera.transform.position = pos;//Vector3.SmoothDamp(previewData.renderUtility.camera.transform.position, pos, ref m_CurrentVelocity, .075f);
+        previewData.renderUtility.camera.transform.rotation = rot;
+        previewData.renderUtility.camera.nearClipPlane = distance - halfSize * 1.1f;
+        previewData.renderUtility.camera.farClipPlane = distance + halfSize * 1.1f;
+
+        previewData.renderUtility.lights[0].intensity = .7f;
+        previewData.renderUtility.lights[0].transform.rotation = rot * Quaternion.Euler(40f, 40f, 0);
+        previewData.renderUtility.lights[1].intensity = .7f;
+        previewData.renderUtility.lights[1].transform.rotation = rot * Quaternion.Euler(340, 218, 177);
+
+        previewData.renderUtility.ambientColor = new Color(.1f, .1f, .1f, 0);
+        m_RenderPass.SetRenderer(previewData.renderer);
+        m_TensionData.RevertToPreviousVertexBuffer();
+        previewData.cameraData.scriptableRenderer.EnqueuePass(m_RenderPass);
+        previewData.renderUtility.Render(true);
+    }
+
+    public override GUIContent GetPreviewTitle()
+    {
+        return new GUIContent($"{nameof(TensionData)}: {base.GetPreviewTitle().text}");
+    }
+
+
+
+    public class DrawRendererPass : ScriptableRenderPass
+    {
+        Renderer m_Target;
+        bool m_CachedOffScreenState;
+        public void SetRenderer(Renderer renderer)
+        {
+            m_Target = renderer;
+        }
+
+        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+        {
+            if (m_Target == null)
+                return;
+            
+            CommandBuffer cmd = CommandBufferPool.Get();
+            using (new ProfilingScope(cmd, new ProfilingSampler(nameof(DrawRendererPass))))
+            {
+                cmd.DrawRenderer(m_Target, _VisualizerMaterial, 0,0);
+            }           
+
+            context.ExecuteCommandBuffer(cmd);
+            CommandBufferPool.Release(cmd);
+        }
     }
 }
