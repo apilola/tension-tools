@@ -9,8 +9,10 @@ int _VertexBufferStride;
 int _VertexCount;
 float _SquashIntensity;
 float _SquashLimit;
+float _SquashPower;
 float _StretchIntensity;
 float _StretchLimit;
+float _StretchPower;
 float3 _Scale;
 
 float3 GetPosition(uint vertexID)
@@ -54,8 +56,8 @@ void SampleTension(uint vertexID, float3 position, out float2 tension)
 		    tension.g += (abs(delta) / d0);
 		}
 	}
-	tension.r = min(tension.r * _SquashIntensity, _SquashLimit);
-	tension.g = min(tension.g * _StretchIntensity, _StretchLimit);
+	tension.r = min(pow(tension.r, _SquashPower) * _SquashIntensity, _SquashLimit);
+	tension.g = min(pow(tension.g, _StretchPower) * _StretchIntensity, _StretchLimit);
 }
 
 void SampleTension_float(uint vertexID, float3 position, out float2 tension)

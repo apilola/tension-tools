@@ -37,29 +37,9 @@ public class TensionDataEditor : Editor
 
     TensionData m_TensionData;
 
-    bool _Visualizer
-    {
-        get
-        {
-            return m_VisualizerEditorProperty.boolValue;
-        }
-        set
-        {
-            m_VisualizerEditorProperty.boolValue = value;
-        }
-    }
-
     static Shader _VisualizerShader;
     static Material _VisualizerMaterial;
     Material _SharedMaterial;
-
-
-    SerializedProperty m_VisualizerEditorProperty;
-    SerializedProperty m_TensionDataPropertiesProp;
-    SerializedProperty m_SquashIntensityProp;
-    SerializedProperty m_SquashLimitProp;
-    SerializedProperty m_StretchIntensityProp;
-    SerializedProperty m_StretchLimitProp;
 
     public void OnEnable()
     {
@@ -69,19 +49,7 @@ public class TensionDataEditor : Editor
             _VisualizerMaterial = new Material(_VisualizerShader);
 
         m_TensionData = (TensionData)target;
-        m_SkinnedMeshRenderer = m_TensionData.GetComponent<SkinnedMeshRenderer>();
-        m_VisualizerEditorProperty = serializedObject.FindProperty("m_VisualizerEditor");
-        m_TensionDataPropertiesProp = serializedObject.FindProperty("m_Properties");
-        m_SquashIntensityProp = m_TensionDataPropertiesProp.FindPropertyRelative("m_SquashIntensity");
-        m_SquashLimitProp = m_TensionDataPropertiesProp.FindPropertyRelative("m_SquashLimit");
-        m_StretchIntensityProp = m_TensionDataPropertiesProp.FindPropertyRelative("m_StretchIntensity");
-        m_StretchLimitProp = m_TensionDataPropertiesProp.FindPropertyRelative("m_StretchLimit");
-        _SharedMaterial = m_SkinnedMeshRenderer.sharedMaterial;
-
-        if(_Visualizer)
-        {
-            m_SkinnedMeshRenderer.material = _VisualizerMaterial;
-        }
+        m_SkinnedMeshRenderer = m_TensionData.Renderer;
 
         if(m_RenderPass == null)
         {
@@ -112,60 +80,6 @@ public class TensionDataEditor : Editor
 
         foreach (var previewData in m_PreviewInstances.Values)
             previewData.Dispose();
-    }
-
-    public override void OnInspectorGUI()
-    {
-        serializedObject.Update();
-        bool tensionPropertiesHaveChanged = DoTensionProperties();
-        if(tensionPropertiesHaveChanged)
-        {
-            m_TensionData.ForceMaterialPropertyBlockUpdate();
-        }
-        serializedObject.ApplyModifiedProperties();
-    }
-
-    private bool DoTensionProperties()
-    {
-        bool hasChanged = false;
-        GUILayout.Label(Style.TensionPropertiesHeaderLabel, Style.HeaderStyle);
-        {
-            EditorGUI.BeginChangeCheck();
-            float value = EditorGUILayout.FloatField(m_SquashIntensityProp.displayName, m_SquashIntensityProp.floatValue);
-            if (EditorGUI.EndChangeCheck())
-            {
-                hasChanged = true;
-                m_TensionData.SetSquashIntensity(value);
-            }
-        }
-        {
-            EditorGUI.BeginChangeCheck();
-            float value = EditorGUILayout.Slider(m_SquashLimitProp.displayName, m_SquashLimitProp.floatValue, 0, 1);
-            if (EditorGUI.EndChangeCheck())
-            {
-                hasChanged = true;
-                m_TensionData.SetSquashLimit(value);
-            }
-        }
-        {
-            EditorGUI.BeginChangeCheck();
-            float value = EditorGUILayout.FloatField(m_StretchIntensityProp.displayName, m_StretchIntensityProp.floatValue);
-            if (EditorGUI.EndChangeCheck())
-            {
-                hasChanged = true;
-                m_TensionData.SetStretchIntensity(value);
-            }
-        }
-        {
-            EditorGUI.BeginChangeCheck();
-            float value = EditorGUILayout.Slider(m_StretchLimitProp.displayName, m_StretchLimitProp.floatValue, 0, 1);
-            if (EditorGUI.EndChangeCheck())
-            {
-                hasChanged = true;
-                m_TensionData.SetStretchLimit(value);
-            }
-        }
-        return hasChanged;
     }
 
     PreviewData GetPreviewData()
@@ -285,42 +199,36 @@ public class TensionDataEditor : Editor
     public override void OnPreviewGUI(Rect r, GUIStyle background)
     {
         var previewData = GetPreviewData();
+        DrawPreview(r, background, previewData);
+
         var direction = Drag2D(m_PreviewDir, r, ref m_Zoom);
         if (direction != m_PreviewDir)
         {
             m_PreviewDir = direction;
         }
+    }
 
-        if (Event.current.type != EventType.Repaint)
-            return;
+    private void DrawPreview(Rect r, GUIStyle background, PreviewData previewData)
+    {
+        if (Event.current.type == EventType.Repaint)
+        {
 
-        if (m_PreviewRect != r)
-        {
-            m_PreviewRect = r;
-        }
 
-        var previewUtility = previewData.renderUtility;
-        previewUtility.BeginPreview(r, background);
-        DoRenderPreview(previewData);
-        previewUtility.EndAndDrawPreview(r);
-        /*
-        previewUtility.BeginPreview(r, previewBackground: GUIStyle.none);
-        m_RenderPass.SetRenderer((target as TensionData).Renderer);
-        if(!m_CameraData)
-        {
-            Debug.Log("Camera Data is missing");
-        }
-        else
-        {
-        }
-        m_CameraData.scriptableRenderer.EnqueuePass(m_RenderPass);
-        previewUtility.Render(true);
-        var texture = previewUtility.EndPreview();
-        GUI.DrawTexture(r, texture);*/
+            if (m_PreviewRect != r)
+            {
+                m_PreviewRect = r;
+            }
 
-        if(m_CurrentVelocity != Vector3.zero)
-        {
-            Repaint();
+            var previewUtility = previewData.renderUtility;
+            previewUtility.BeginPreview(r, background);
+            DoRenderPreview(previewData);
+            previewUtility.EndAndDrawPreview(r);
+
+            if (m_CurrentVelocity != Vector3.zero)
+            {
+                Repaint();
+            }
+
         }
     }
 
@@ -356,7 +264,10 @@ public class TensionDataEditor : Editor
         return new GUIContent($"{nameof(TensionData)}: {base.GetPreviewTitle().text}");
     }
 
-
+    public override void OnPreviewSettings()
+    {
+        GUILayout.Button("Hello");
+    }
 
     public class DrawRendererPass : ScriptableRenderPass
     {
@@ -382,4 +293,6 @@ public class TensionDataEditor : Editor
             CommandBufferPool.Release(cmd);
         }
     }
+
+   
 }

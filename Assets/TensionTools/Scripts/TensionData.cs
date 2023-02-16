@@ -6,12 +6,8 @@ using System;
 using System.Reflection;
 
 [RequireComponent(typeof(SkinnedMeshRenderer)), ExecuteAlways]
-public class TensionData : MonoBehaviour
+public class TensionData : MonoBehaviour, ISerializationCallbackReceiver
 {
-#if UNITY_EDITOR
-
-    [SerializeField, HideInInspector] bool m_VisualizerEditor;
-#endif
     public enum Mode
     {
         OnAwake,
@@ -33,65 +29,101 @@ public class TensionData : MonoBehaviour
     [SerializeField, HideInInspector] int[] edgeData;
     [NonSerialized] bool isSetUp;
 
-    [SerializeField] Properties m_Properties = new Properties()
+    [SerializeField]
+    private Property m_Squash = new Property(Property.SQUASH);
+    [SerializeField]
+    private Property m_Stretch = new Property(Property.STRETCH);
+    public Property Squash => m_Squash;
+    public Property Stretch => m_Stretch;
+
+    [System.Serializable]
+    public class Property
     {
-        SquashIntensity = 1f,
-        SquashLimit = 1f,
-        StretchIntensity = 1f,
-        StretchLimit = 1f,
-    };
+        private const string INTENSITY_FORMAT = "_{0}Intensity";
+        private const string LIMIT_FORMAT = "_{0}Limit";
+        private const string POWER_FORMAT = "_{0}Power";
 
-    [Serializable]
-    public struct Properties
-    {
-        [SerializeField] private float m_SquashIntensity;
-        [SerializeField] private float m_SquashLimit;
-        [SerializeField] private float m_StretchIntensity;
-        [SerializeField] private float m_StretchLimit;
+        public const string SQUASH = "Squash";
+        public const string STRETCH = "Stretch";
 
-        public float SquashIntensity { get => m_SquashIntensity; set => m_SquashIntensity = Mathf.Max(value, 0); }
-        public float SquashLimit { get => m_SquashLimit; set => m_SquashLimit = Mathf.Clamp01(value); }
-        public float StretchIntensity { get => m_StretchIntensity; set => m_StretchIntensity = Mathf.Max(value, 0); }
-        public float StretchLimit { get => m_StretchLimit; set => m_StretchLimit = Mathf.Clamp01(value); }
+        private readonly int LimitProp;
+        private readonly int IntensityProp;
+        private readonly int PowerProp;
+        private readonly string ModeID;
 
-    }    
-
-    public void SetSquashIntensity(float value)
-    {
-        value = m_Properties.SquashIntensity = value;
-        if (value != m_MaterialPropertyBlock.GetFloat(Params.SQUASH_INTENSITY))
+        public Property(string ModeID)
         {
-            m_MaterialPropertyBlock.SetFloat(Params.SQUASH_INTENSITY, value);
+            this.ModeID = ModeID;
+            LimitProp = Shader.PropertyToID(string.Format(LIMIT_FORMAT, ModeID));
+            IntensityProp = Shader.PropertyToID(string.Format(INTENSITY_FORMAT, ModeID));
+            PowerProp = Shader.PropertyToID(string.Format(POWER_FORMAT, ModeID));
+        }
+
+        [SerializeField, Min(0)] private float m_Intensity = 1;
+        [SerializeField, Range(0, 1)] private float m_Limit = 1;
+        [SerializeField, Min(.01f)] private float m_Power = 1;
+        internal TensionData m_TensionData;
+
+        public float Intensity
+        {
+            get => m_Intensity; 
+            set
+            {
+                value = Mathf.Max(0, value);
+                if(value != m_Intensity)
+                {
+                    m_TensionData.m_MaterialPropertyBlock.SetFloat(IntensityProp, m_Intensity);
+                    m_Intensity = value;
+                }
+            }
+        }
+
+        public float Limit
+        {
+            get => m_Limit;
+            set
+            {
+                value = Mathf.Clamp01(value);
+                if (value != m_Limit)
+                {
+                    m_TensionData.m_MaterialPropertyBlock.SetFloat(LimitProp, m_Limit);
+                    m_Limit = value;
+                }
+            }
+        }
+
+        public float Power
+        {
+            get => m_Power;
+            set
+            {
+                value = Mathf.Max(0, value);
+                if (value != m_Power)
+                {
+                    m_TensionData.m_MaterialPropertyBlock.SetFloat(PowerProp, m_Power);
+                    m_Power = value;
+                }
+            }
+        }
+
+        public void ApplyMaterialProperties()
+        {
+            UpdateMaterialPropertyBlock(m_TensionData.m_MaterialPropertyBlock);
+        }
+
+        public void ForceApplyMaterialProperties()
+        {
+            UpdateMaterialPropertyBlock(m_TensionData.m_MaterialPropertyBlock);
+            m_TensionData.ForceMaterialPropertyBlockUpdate();
+        }
+
+        public void UpdateMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)
+        {
+            propertyBlock.SetFloat(IntensityProp, m_Intensity);
+            propertyBlock.SetFloat(LimitProp, m_Limit);
+            propertyBlock.SetFloat(PowerProp, m_Power);
         }
     }
-
-    public void SetSquashLimit(float value)
-    {
-        value = m_Properties.SquashLimit = value;
-        if (value != m_MaterialPropertyBlock.GetFloat(Params.SQUASH_LIMIT))
-        {
-            m_MaterialPropertyBlock.SetFloat(Params.SQUASH_LIMIT, value);
-        }
-    }
-
-    public void SetStretchIntensity(float value)
-    {
-        value = m_Properties.StretchIntensity = value;
-        if(value != m_MaterialPropertyBlock.GetFloat(Params.STRETCH_INTENSITY))
-        {
-            m_MaterialPropertyBlock.SetFloat(Params.STRETCH_INTENSITY, value);
-        }
-    }
-
-    public void SetStretchLimit(float value)
-    {
-        value = m_Properties.StretchLimit = value;
-        if (value != m_MaterialPropertyBlock.GetFloat(Params.STRETCH_LIMIT))
-        {
-            m_MaterialPropertyBlock.SetFloat(Params.STRETCH_LIMIT, value);
-        }
-    }
-
 
     private void OnValidate()
     {
@@ -99,6 +131,11 @@ public class TensionData : MonoBehaviour
         m_SkinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
         if (m_MaterialPropertyBlock == null)
             m_MaterialPropertyBlock = new MaterialPropertyBlock();
+
+        m_Stretch.m_TensionData = this;
+        m_Squash.m_TensionData = this;
+        m_Stretch.ApplyMaterialProperties();
+        m_Squash.ForceApplyMaterialProperties();
         if (!isSetUp)
             UnityEditor.EditorApplication.delayCall += SetUp;
         else if (!CanSetUp())
@@ -108,16 +145,19 @@ public class TensionData : MonoBehaviour
             UpdateVertexBuffer();
         }
     }
-
-    private void Start()
+    private void Awake()
     {
-        Debug.Log("Awake Called");
         if (m_SkinnedMeshRenderer == null)
             m_SkinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
         if (m_MaterialPropertyBlock == null)
             m_MaterialPropertyBlock = new MaterialPropertyBlock();
-        //skinnedMeshRenderer.re
-        //SetUp();
+
+
+        m_Stretch.m_TensionData = this;
+        m_Squash.m_TensionData = this;
+        m_Stretch.ApplyMaterialProperties();
+        m_Squash.ForceApplyMaterialProperties();
+
     }
     private void OnWillRenderObject()
     {
@@ -152,6 +192,8 @@ public class TensionData : MonoBehaviour
         public static readonly int SQUASH_LIMIT = Shader.PropertyToID("_SquashLimit");
         public static readonly int STRETCH_INTENSITY = Shader.PropertyToID("_StretchIntensity");
         public static readonly int STRETCH_LIMIT = Shader.PropertyToID("_StretchLimit");
+        public static readonly int STRETCH_POWER = Shader.PropertyToID("_StretchPower");
+        public static readonly int SQUASH_POWER = Shader.PropertyToID("_SquashPower");
     }
 
     bool IsMaterialValid(Material mat)
@@ -199,7 +241,7 @@ public class TensionData : MonoBehaviour
         if (m_MaterialPropertyBlock == null)
             m_MaterialPropertyBlock = new MaterialPropertyBlock();
 
-        SetUpMaterialPropertyBlock(vertexCount, m_Properties, m_MaterialPropertyBlock, _EdgeBuffer, _BaseEdgeBuffer);
+        SetUpMaterialPropertyBlock(vertexCount, m_Squash, m_Stretch, m_MaterialPropertyBlock, _EdgeBuffer, _BaseEdgeBuffer);
         isSetUp = true;
     }
 
@@ -214,15 +256,16 @@ public class TensionData : MonoBehaviour
         isSetUp = false;
     }
 
-    private void SetUpMaterialPropertyBlock(int vertexCount, Properties tensionProperties, MaterialPropertyBlock propertyBlock, ComputeBuffer edgeBuffer, ComputeBuffer baseEdgeBuffer)
+    private void SetUpMaterialPropertyBlock(int vertexCount, Property squash, Property stretch, MaterialPropertyBlock propertyBlock, ComputeBuffer edgeBuffer, ComputeBuffer baseEdgeBuffer)
     {
         propertyBlock.SetBuffer(Params.EDGE_BUFFER, edgeBuffer);
         propertyBlock.SetInteger(Params.VERTEX_COUNT, vertexCount);
         propertyBlock.SetBuffer(Params.BASE_EDGE_BUFFER, baseEdgeBuffer);
-        propertyBlock.SetFloat(Params.SQUASH_INTENSITY, tensionProperties.SquashIntensity);
-        propertyBlock.SetFloat(Params.SQUASH_LIMIT, tensionProperties.SquashLimit);
-        propertyBlock.SetFloat(Params.STRETCH_INTENSITY, tensionProperties.StretchIntensity);
-        propertyBlock.SetFloat(Params.STRETCH_LIMIT, tensionProperties.StretchLimit);
+        propertyBlock.SetFloat(Params.SQUASH_INTENSITY, squash.Intensity);
+        propertyBlock.SetFloat(Params.SQUASH_LIMIT, squash.Limit);
+        propertyBlock.SetFloat(Params.SQUASH_LIMIT, squash.Limit);
+        propertyBlock.SetFloat(Params.STRETCH_INTENSITY, stretch.Intensity);
+        propertyBlock.SetFloat(Params.STRETCH_LIMIT, stretch.Limit);
     }
 
     private void ApplyVertexBufferToMaterialPropertyBlock(MaterialPropertyBlock propertyBlock, GraphicsBuffer vertexBuffer)
@@ -366,5 +409,14 @@ public class TensionData : MonoBehaviour
     {
         buffer?.Release();
         buffer = null;
+    }
+
+    void ISerializationCallbackReceiver.OnBeforeSerialize()
+    {
+
+    }
+
+    void ISerializationCallbackReceiver.OnAfterDeserialize()
+    {
     }
 }
