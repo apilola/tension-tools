@@ -61,7 +61,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Normal_Map:
-        m_Texture: {fileID: 2800000, guid: 02f8cee5541c3a546ae9cd7213b1460a, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
@@ -81,11 +81,11 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Texture2Ds:
-        m_Texture: {fileID: 2800000, guid: 65bcaffffad571847884dfcb6828bd97, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WinkleMap:
-        m_Texture: {fileID: 2800000, guid: 5f3f39963620ff44097886737cb92fa7, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - unity_Lightmaps:
@@ -119,13 +119,13 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Intensity: 2.71
+    - _Intensity: 3.11
     - _Metalic: 0
     - _Metallic: 0
     - _Normal_Intensity: 1
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _Power: 1
+    - _Power: 9.2
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
@@ -136,8 +136,8 @@ Material:
     - _SrcBlend: 5
     - _Surface: 1
     - _THICKNESS_SOURCE: 1
-    - _Thickness_Max: 0.65
-    - _Thickness_Min: 0.18
+    - _Thickness_Max: 0.9
+    - _Thickness_Min: 0.45
     - _WorkflowMode: 1
     - _WrinkleIntensity: 1.13
     - _ZTest: 4
@@ -145,10 +145,10 @@ Material:
     - _ZWriteControl: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.9433962, g: 0.45297948, b: 0.4227483, a: 1}
+    - _Color: {r: 0.8962264, g: 0.22615722, b: 0.18178178, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _Tint: {r: 0.5943396, g: 0.048924036, b: 0.014017441, a: 1}
+    - _Tint: {r: 0.990566, g: 0.6458054, b: 0.52799034, a: 1}
   m_BuildTextureStacks: []
 --- !u!114 &5049975573519275786
 MonoBehaviour:

@@ -12,6 +12,14 @@ using System.Reflection;
 [CustomEditor(typeof(TensionData))]
 public class TensionDataEditor : Editor
 {
+    public enum VisualizerMode
+    {
+        Both,
+        Squash,
+        Stretch,
+        Off
+    }
+
     [InitializeOnLoad]
     public class Style
     {
@@ -40,6 +48,20 @@ public class TensionDataEditor : Editor
     static Shader _VisualizerShader;
     static Material _VisualizerMaterial;
     Material _SharedMaterial;
+    VisualizerMode _VisualizerMode;
+
+    Dictionary<int, PreviewData> m_PreviewInstances = new Dictionary<int, PreviewData>();
+    private DrawRendererPass m_RenderPass;
+    Vector2 m_PreviewDir;
+    Vector3 m_CurrentVelocity;
+    float m_Zoom;
+    Rect m_PreviewRect;
+    private PropertyInfo referenceTargetIndexInfo = typeof(Editor).GetProperty("referenceTargetIndex", BindingFlags.NonPublic | BindingFlags.Instance);
+
+    private int GetReferenceTargetIndex()
+    {
+        return (int)referenceTargetIndexInfo.GetValue(this);
+    }
 
     public void OnEnable()
     {
@@ -133,19 +155,6 @@ public class TensionDataEditor : Editor
             renderer = null;
             m_Disposed = true;
         }
-    }
-
-    Dictionary<int, PreviewData> m_PreviewInstances = new Dictionary<int, PreviewData>();
-    private DrawRendererPass m_RenderPass;
-    Vector2 m_PreviewDir;
-    Vector3 m_CurrentVelocity;
-    float m_Zoom;
-    Rect m_PreviewRect;
-    private PropertyInfo referenceTargetIndexInfo = typeof(Editor).GetProperty("referenceTargetIndex", BindingFlags.NonPublic | BindingFlags.Instance);
-
-    private int GetReferenceTargetIndex()
-    {
-        return (int) referenceTargetIndexInfo.GetValue(this);
     }
 
     public static Vector2 Drag2D(Vector2 scrollPosition, Rect position, ref float zoom)
@@ -266,7 +275,27 @@ public class TensionDataEditor : Editor
 
     public override void OnPreviewSettings()
     {
-        GUILayout.Button("Hello");
+        {
+            EditorGUI.BeginChangeCheck();
+            var mode = (VisualizerMode) EditorGUILayout.EnumPopup(GUIContent.none, _VisualizerMode, EditorStyles.toolbarPopup, GUILayout.Width(60));
+            if (EditorGUI.EndChangeCheck())
+            {                
+                var value = $"_MODE_{mode.ToString().ToUpper()}";
+                Debug.Log(value);
+                var keyword = new LocalKeyword(_VisualizerShader, value);
+                _VisualizerMaterial.EnableKeyword(keyword);
+
+                var current = $"_MODE_{_VisualizerMode.ToString().ToUpper()}";
+                var currentKeyword = new LocalKeyword(_VisualizerShader, current);
+                _VisualizerMaterial.DisableKeyword(currentKeyword);
+
+
+                var Both = $"_MODE_{VisualizerMode.Both.ToString().ToUpper()}";
+                var isBothEnabled =  _VisualizerMaterial.IsKeywordEnabled(Both);
+                Debug.Log($"Is Both Enabled: {isBothEnabled}");
+                _VisualizerMode = mode;
+            }
+        }
     }
 
     public class DrawRendererPass : ScriptableRenderPass
