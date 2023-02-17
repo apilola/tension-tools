@@ -109,8 +109,8 @@ namespace TensionTools
             base.OnInspectorGUI();
 
             EditorGUILayout.HelpBox("Unity may show warnings for undisposed Compute/Graphics Buffers. " +
-                "\nLeak detection mode may be toggled through Menu->TensionTools->LeakDetectionMode" +
-                "\nOn my machine leak detection does not seem to be outputting any stack traces... ", MessageType.Warning);
+                "\n\nLeak detection mode may be toggled through: Menu->TensionTools->LeakDetectionMode" +
+                "\n\nOn my machine, leak detection does not seem to be outputting any stack traces, feedback would be appreciated... ", MessageType.Warning);
         }
 
         PreviewData GetPreviewData()

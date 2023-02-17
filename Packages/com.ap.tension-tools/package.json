@@ -1,5 +1,5 @@
 {
-  "name": "com.na.tension-tools",
+  "name": "com.ap.tension-tools",
   "description": "A package that tools to work with tension in the in Shader Graph",
   "version": "0.1.0",
   "unity": "2021.3",

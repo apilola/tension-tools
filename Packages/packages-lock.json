@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "com.na.tension-tools": {
-      "version": "file:com.na.tension-tools",
+    "com.ap.tension-tools": {
+      "version": "file:com.ap.tension-tools",
       "depth": 0,
       "source": "embedded",
       "dependencies": {
