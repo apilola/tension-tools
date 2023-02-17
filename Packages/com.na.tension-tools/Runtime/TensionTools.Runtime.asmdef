@@ -1,0 +1,16 @@
+{
+    "name": "TensionTools.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:b4517ec124862cb4bb3b8b27d72843a6"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
