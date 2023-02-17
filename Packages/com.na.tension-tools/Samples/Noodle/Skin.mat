@@ -118,18 +118,18 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Intensity: 1
+    - _Intensity: 2.36
     - _Metalic: 0
     - _Metallic: 0
-    - _Normal_Intensity: 0.64
+    - _Normal_Intensity: 0.21
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _Power: 3.54
+    - _Power: 2.66
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SUBSURFACE_SCATTERING: 1
-    - _Smoothness: 0.601
+    - _Smoothness: 0.738
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -144,7 +144,7 @@ Material:
     - _ZWriteControl: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.8490566, g: 0.3936026, b: 0.36445355, a: 1}
+    - _Color: {r: 0.9433962, g: 0.3768684, b: 0.3426486, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _Tint: {r: 0.4811321, g: 0.10973296, b: 0.088510156, a: 1}

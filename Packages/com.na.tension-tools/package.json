@@ -1,7 +1,7 @@
 {
   "name": "com.na.tension-tools",
   "description": "A package that tools to work with tension in the in Shader Graph",
-  "version": "12.1.10",
+  "version": "0.1.0",
   "unity": "2021.3",
   "displayName": "Tension Tools",
   "dependencies": {
