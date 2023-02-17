@@ -118,13 +118,13 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Intensity: 1.52
+    - _Intensity: 1
     - _Metalic: 0
     - _Metallic: 0
-    - _Normal_Intensity: 0.8
+    - _Normal_Intensity: 0.64
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _Power: 1
+    - _Power: 3.54
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
@@ -135,8 +135,8 @@ Material:
     - _SrcBlend: 1
     - _Surface: 0
     - _THICKNESS_SOURCE: 1
-    - _Thickness_Max: 0.38
-    - _Thickness_Min: 0.27
+    - _Thickness_Max: 0.53
+    - _Thickness_Min: 0.18
     - _WorkflowMode: 1
     - _WrinkleIntensity: 1
     - _ZTest: 4
