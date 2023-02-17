@@ -3,7 +3,7 @@
 #define TENSION_HELPERS_INCLUDED
 
 StructuredBuffer<int> _EdgeBuffer;
-StructuredBuffer<float3> _BaseEdgeBuffer;
+StructuredBuffer<float3> _RawEdgeDeltaBuffer;
 ByteAddressBuffer _VertexBuffer;
 int _VertexBufferStride;
 int _VertexCount;
@@ -20,9 +20,9 @@ float3 GetPosition(uint vertexID)
 	return asfloat(_VertexBuffer.Load3((vertexID * _VertexBufferStride) << 2));// [vertexID * _VertexBufferStride] ;
 }
 
-float3 GetBaseEdge(uint edgeID)
+float3 GetRawEdgeDelta(uint edgeID)
 {
-	return _BaseEdgeBuffer[edgeID];
+	return _RawEdgeDeltaBuffer[edgeID];
 }
 
 int2 GetRange(uint vertexID)
@@ -42,8 +42,8 @@ void SampleTension(uint vertexID, float3 position, out float2 tension)
 	tension = float2(0, 0);
 	for (int i = range.x; i < range.y; i++)
 	{
-		float3 neighborBaseEdge = GetBaseEdge(i) * _Scale;
-		float d0 = length(neighborBaseEdge);
+		float3 rawEdgeDelta = GetRawEdgeDelta(i) * _Scale;
+		float d0 = length(rawEdgeDelta);
 		float3 neighborPos = GetPosition(_EdgeBuffer[i + _VertexCount]);
 		float d1 = length((neighborPos - position));
 		float delta = (d0 - d1);

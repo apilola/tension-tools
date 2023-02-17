@@ -99,9 +99,17 @@ public class TensionDataEditor : Editor
 
     private void OnDisable()
     {
-
         foreach (var previewData in m_PreviewInstances.Values)
             previewData.Dispose();
+    }
+
+    public override void OnInspectorGUI()
+    {
+        base.OnInspectorGUI();
+
+        EditorGUILayout.HelpBox("Unity may show warnings for undisposed Compute/Graphics Buffers. " +
+            "\nLeak detection mode may be toggled through Menu->TensionTools->LeakDetectionMode" +
+            "\nOn my machine leak detection does not seem to be outputting any stack traces... ", MessageType.Warning);
     }
 
     PreviewData GetPreviewData()
