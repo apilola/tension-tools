@@ -12,7 +12,7 @@ The project contents contains the code nessesary to calculate tension data on in
 
 ### Requirements
 - Atleast Unity 2021.3.18f1
-- This package requires the use of the Universal Render Pipeline although the underlying approach does not require it.
+- This Noodle Demo in the showcase above requires the use of the Universal Render Pipeline although the package itself should work in any pipeline
 
 ### Installation
 Edit your package manifest to include this package.
