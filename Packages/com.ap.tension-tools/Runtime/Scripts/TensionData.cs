@@ -429,7 +429,7 @@ namespace TensionTools
             return buffer;
         }
 
-        private void UpdateVertexBuffer()
+        public void UpdateVertexBuffer()
         {
             ReleaseBuffer(ref _VertexBuffer);
             m_SkinnedMeshRenderer.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
@@ -444,6 +444,15 @@ namespace TensionTools
         public void ForceMaterialPropertyBlockUpdate()
         {
             m_SkinnedMeshRenderer.SetPropertyBlock(m_MaterialPropertyBlock);
+        }
+
+        public MaterialPropertyBlock GetMaterialPropertyBlock()
+        {
+            if (m_MaterialPropertyBlock == null)
+            {
+                m_MaterialPropertyBlock = new MaterialPropertyBlock();
+            }
+            return m_MaterialPropertyBlock;
         }
 
         public void RevertToPreviousVertexBuffer()

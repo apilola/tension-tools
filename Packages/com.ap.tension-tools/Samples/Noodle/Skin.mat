@@ -118,18 +118,18 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Intensity: 2.48
+    - _Intensity: 2.51
     - _Metalic: 0
     - _Metallic: 0
-    - _Normal_Intensity: 0.57
+    - _Normal_Intensity: 0.65
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _Power: 1
+    - _Power: 1.67
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SUBSURFACE_SCATTERING: 1
-    - _Smoothness: 0.828
+    - _Smoothness: 0.802
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -144,10 +144,10 @@ Material:
     - _ZWriteControl: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.7830189, g: 0.4100809, b: 0.38781595, a: 1}
+    - _Color: {r: 0.6509434, g: 0.2897552, b: 0.28555533, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _Tint: {r: 0.6226415, g: 0.44128248, b: 0.43173727, a: 1}
+    - _Tint: {r: 0.6698113, g: 0.4518067, b: 0.4561094, a: 1}
   m_BuildTextureStacks: []
 --- !u!114 &5049975573519275786
 MonoBehaviour:

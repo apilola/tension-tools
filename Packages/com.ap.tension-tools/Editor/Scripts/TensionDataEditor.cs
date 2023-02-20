@@ -2,7 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+#if USING_URP
 using UnityEngine.Rendering.Universal;
+#elif USING_HDRP
+using UnityEngine.Rendering.HighDefinition;
+#endif
 using UnityEngine.Rendering;
 using System;
 using UnityObject = UnityEngine.Object;
@@ -21,27 +25,13 @@ namespace TensionTools
             Off
         }
 
-        [InitializeOnLoad]
-        public class Style
-        {
-            static Style()
-            {
-                VisualizerIconOff = EditorGUIUtility.FindTexture("animationvisibilitytoggleon@2x");
-                VisualizerIconOn = EditorGUIUtility.FindTexture("animationvisibilitytoggleoff@2x");
+        public const string VISUALIZER_SHADER_NAME =
+#if USING_URP
+        "Shader Graphs/TensionVisualizerURP";
+#else
+        "Shader Graphs/TensionVisualizer";
+#endif
 
-            }
-            public readonly static Texture2D VisualizerIconOff;
-            public readonly static Texture2D VisualizerIconOn;
-            readonly static GUIContent VisualizerButtonLabel = new GUIContent();
-            public static GUIContent GetVisualizerContent(bool on)
-            {
-                VisualizerButtonLabel.image = (on) ? VisualizerIconOn : VisualizerIconOff;
-                return VisualizerButtonLabel;
-            }
-
-            public static GUIStyle HeaderStyle => EditorStyles.boldLabel;
-            public readonly static GUIContent TensionPropertiesHeaderLabel = new GUIContent("Tension Properties");
-        }  
         SkinnedMeshRenderer m_SkinnedMeshRenderer;
 
         TensionData m_TensionData;
@@ -52,7 +42,13 @@ namespace TensionTools
         VisualizerMode _VisualizerMode;
 
         Dictionary<int, PreviewData> m_PreviewInstances = new Dictionary<int, PreviewData>();
+
+#if USING_URP
         private DrawRendererPass m_RenderPass;
+#else
+        private Mesh m_PreviewMesh;
+#endif
+
         Vector2 m_PreviewDir;
         Vector3 m_CurrentVelocity;
         float m_Zoom;
@@ -67,17 +63,31 @@ namespace TensionTools
         public void OnEnable()
         {
             if (_VisualizerShader == null)
-                _VisualizerShader = Shader.Find("Shader Graphs/TensionVisualizer");
+                _VisualizerShader = Shader.Find(VISUALIZER_SHADER_NAME);
             if (_VisualizerMaterial == null)
                 _VisualizerMaterial = new Material(_VisualizerShader);
 
             m_TensionData = (TensionData)target;
             m_SkinnedMeshRenderer = m_TensionData.Renderer;
 
+            if(m_SkinnedMeshRenderer == null)
+            {
+                throw new MissingComponentException($"{nameof(TensionDataEditor)}:: Requires a {nameof(SkinnedMeshRenderer)}");
+            }
+
+#if USING_URP
             if(m_RenderPass == null)
             {
                 m_RenderPass = new DrawRendererPass();
             }
+#else
+            if(m_PreviewMesh == null)
+            {
+                m_PreviewMesh = new Mesh();
+            }
+
+            m_SkinnedMeshRenderer.BakeMesh(m_PreviewMesh);
+#endif
 
             if (EditorSettings.defaultBehaviorMode == EditorBehaviorMode.Mode2D)
                 m_PreviewDir = new Vector2(0, 0);
@@ -135,26 +145,63 @@ namespace TensionTools
 
             public string prefabAssetPath { get; private set; }
 
+#if USING_URP
             public UniversalAdditionalCameraData cameraData { get; private set; }
-
+#else
+            public Mesh previewMesh { get; private set; }
+#endif
             public Bounds renderableBounds { get; private set; }
 
             public Vector3 currentPosition { get; set; }
 
             public bool useStaticAssetPreview { get; set; }
 
+            internal static Mesh GetPreviewSphere()
+            {
+                var handleGo = (GameObject)EditorGUIUtility.LoadRequired("Previews/PreviewMaterials.fbx");
+                // Temp workaround to make it not render in the scene
+                handleGo.SetActive(false);
+                foreach (Transform t in handleGo.transform)
+                {
+                    if (t.name == "sphere")
+                        return t.GetComponent<MeshFilter>().sharedMesh;
+                }
+                return null;
+            }
+
             public PreviewData(Renderer renderer)
             {
                 renderUtility = new PreviewRenderUtility();
                 renderUtility.camera.fieldOfView = 30.0f;
-                cameraData = renderUtility.camera.GetUniversalAdditionalCameraData();
-                if(cameraData == null)
-                {
-                    Debug.LogError("Error: Camera Data is missing");
-                }
+
                 this.renderer = renderer;
                 this.renderableBounds = renderer.bounds;
+#if USING_URP
+                cameraData = renderUtility.camera.GetUniversalAdditionalCameraData();
+#else
+                var cameraData = renderUtility.camera.gameObject.AddComponent<HDAdditionalCameraData>();
+                previewMesh = new Mesh();
+                previewMesh.hideFlags = HideFlags.HideAndDontSave;
+                previewMesh.MarkDynamic();
+
+                if (renderer is SkinnedMeshRenderer smRenderer)
+                {
+                    smRenderer.BakeMesh(previewMesh);
+                }
+#endif
             }
+
+#if !USING_URP
+            public Mesh GetUpdatedPreviewMesh()
+            {
+                if(renderer is SkinnedMeshRenderer smRenderer)
+                {
+                    smRenderer.BakeMesh(previewMesh);
+                }
+
+                return previewMesh;
+            }
+#endif
 
             public void Dispose()
             {
@@ -163,6 +210,14 @@ namespace TensionTools
                 renderUtility.Cleanup();
                 renderer = null;
                 m_Disposed = true;
+
+#if !USING_URP
+                if(previewMesh)
+                {
+                    DestroyImmediate(previewMesh);
+                    previewMesh = null;
+                }
+#endif
             }
         }
 
@@ -250,6 +305,36 @@ namespace TensionTools
             }
         }
 
+        public override GUIContent GetPreviewTitle()
+        {
+            return new GUIContent($"{nameof(TensionData)}: {base.GetPreviewTitle().text}");
+        }
+
+        public override void OnPreviewSettings()
+        {
+            {
+                EditorGUI.BeginChangeCheck();
+                var mode = (VisualizerMode)EditorGUILayout.EnumPopup(GUIContent.none, _VisualizerMode, EditorStyles.toolbarPopup, GUILayout.Width(60));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    var value = $"_MODE_{mode.ToString().ToUpper()}";
+                    Debug.Log(value);
+                    var keyword = new LocalKeyword(_VisualizerShader, value);
+                    _VisualizerMaterial.EnableKeyword(keyword);
+
+                    var current = $"_MODE_{_VisualizerMode.ToString().ToUpper()}";
+                    var currentKeyword = new LocalKeyword(_VisualizerShader, current);
+                    _VisualizerMaterial.DisableKeyword(currentKeyword);
+
+
+                    var Both = $"_MODE_{VisualizerMode.Both.ToString().ToUpper()}";
+                    var isBothEnabled = _VisualizerMaterial.IsKeywordEnabled(Both);
+                    Debug.Log($"Is Both Enabled: {isBothEnabled}");
+                    _VisualizerMode = mode;
+                }
+            }
+        }
+
         private void DoRenderPreview(PreviewData previewData)
         {
             var bounds = previewData.renderableBounds;
@@ -271,42 +356,32 @@ namespace TensionTools
             previewData.renderUtility.lights[1].transform.rotation = rot * Quaternion.Euler(340, 218, 177);
 
             previewData.renderUtility.ambientColor = new Color(.1f, .1f, .1f, 0);
-            m_RenderPass.SetRenderer(previewData.renderer);
+            if(m_TensionData == null)
+            {
+                throw new MissingReferenceException($"Missing {nameof(TensionData)}");
+            }
+
+#if USING_URP
             m_TensionData.RevertToPreviousVertexBuffer();
+            m_RenderPass.SetRenderer(previewData.renderer);
             previewData.cameraData.scriptableRenderer.EnqueuePass(m_RenderPass);
             previewData.renderUtility.Render(true);
+#else
+            UnityEngine.Profiling.Profiler.BeginSample($"{nameof(TensionDataEditor)}:: Draw Preview");
+
+            m_TensionData.UpdateVertexBuffer();
+            var matrix = Matrix4x4.TRS(m_TensionData.transform.position, m_TensionData.transform.rotation, m_TensionData.transform.lossyScale);
+            var cam = previewData.renderUtility.camera;
+            var cmd = new CommandBuffer();
+            cam.AddCommandBuffer(CameraEvent.AfterForwardOpaque, cmd);
+            cmd.DrawRenderer(previewData.renderer, _VisualizerMaterial, 0, 0);
+            previewData.renderUtility.Render(false);
+
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
         }
 
-        public override GUIContent GetPreviewTitle()
-        {
-            return new GUIContent($"{nameof(TensionData)}: {base.GetPreviewTitle().text}");
-        }
-
-        public override void OnPreviewSettings()
-        {
-            {
-                EditorGUI.BeginChangeCheck();
-                var mode = (VisualizerMode) EditorGUILayout.EnumPopup(GUIContent.none, _VisualizerMode, EditorStyles.toolbarPopup, GUILayout.Width(60));
-                if (EditorGUI.EndChangeCheck())
-                {                
-                    var value = $"_MODE_{mode.ToString().ToUpper()}";
-                    Debug.Log(value);
-                    var keyword = new LocalKeyword(_VisualizerShader, value);
-                    _VisualizerMaterial.EnableKeyword(keyword);
-
-                    var current = $"_MODE_{_VisualizerMode.ToString().ToUpper()}";
-                    var currentKeyword = new LocalKeyword(_VisualizerShader, current);
-                    _VisualizerMaterial.DisableKeyword(currentKeyword);
-
-
-                    var Both = $"_MODE_{VisualizerMode.Both.ToString().ToUpper()}";
-                    var isBothEnabled =  _VisualizerMaterial.IsKeywordEnabled(Both);
-                    Debug.Log($"Is Both Enabled: {isBothEnabled}");
-                    _VisualizerMode = mode;
-                }
-            }
-        }
-
+#if USING_URP
         public class DrawRendererPass : ScriptableRenderPass
         {
             Renderer m_Target;
@@ -331,7 +406,6 @@ namespace TensionTools
                 CommandBufferPool.Release(cmd);
             }
         }
-
-
-        }
+#endif
+    }
 }
