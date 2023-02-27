@@ -270,23 +270,6 @@ public class TensionData : MonoBehaviour
         this.edgeData = edgeData;
         return buffer;
     }
-    /*
-    private ComputeBuffer SetUpBaseVertexBuffer(SkinnedMeshRenderer skinnedMeshRenderer)
-    {
-        var mesh = skinnedMeshRenderer.sharedMesh;
-        ComputeBuffer buffer = new ComputeBuffer(mesh.vertices.Length, 12);
-        var fverts = new vert[mesh.vertexCount];
-        var vertexBuffer = skinnedMeshRenderer.GetVertexBuffer();
-        vertexBuffer.GetData(fverts);
-        ReleaseBuffer(ref vertexBuffer);
-        baseVerts = new Vector3[mesh.vertexCount];
-        for (var i = 0; i < mesh.vertexCount; i++)
-        {
-            baseVerts[i] = fverts[i].pos;
-        }
-        buffer.SetData(baseVerts);
-        return buffer;
-    }*/
 
     private ComputeBuffer SetUpBaseEdgeBuffer(SkinnedMeshRenderer skinnedMeshRenderer)
     {
