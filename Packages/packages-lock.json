@@ -4,9 +4,7 @@
       "version": "file:com.ap.tension-tools",
       "depth": 0,
       "source": "embedded",
-      "dependencies": {
-        "com.unity.render-pipelines.core": "12.1.10"
-      }
+      "dependencies": {}
     },
     "com.unity.burst": {
       "version": "1.8.2",
