@@ -1,5 +1,5 @@
 # tension-tools
-![caption](./Documentation/noodle_showcase.gif)
+![caption](https://i.redd.it/1nbkmf9kteja1.gif)
 <Details>
 <Summary><b>Other Showcases<b></Summary>
 
