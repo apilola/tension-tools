@@ -8,7 +8,7 @@
     {
       "displayName": "Noodle Sample",
       "description": "Noodle Sample Scene",
-      "path": "Samples/Noodle"
+      "path": "Samples~/Noodle"
     }
   ],
   "unityRelease": "18f1"
