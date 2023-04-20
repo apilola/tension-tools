@@ -10,5 +10,6 @@
       "description": "Noodle Sample Scene",
       "path": "Samples/Noodle"
     }
-  ]
+  ],
+  "unityRelease": "18f1"
 }
