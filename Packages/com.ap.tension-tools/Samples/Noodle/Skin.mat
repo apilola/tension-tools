@@ -112,31 +112,31 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _Distortion: -0.5
+    - _Distortion: -0.3
     - _DstBlend: 0
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Intensity: 2.53
-    - _Metalic: 0
+    - _Intensity: 1.64
+    - _Metalic: 0.07
     - _Metallic: 0
-    - _Normal_Intensity: 0.54
+    - _Normal_Intensity: 0.66
     - _OcclusionStrength: 1
     - _Parallax: 0.005
-    - _Power: 9.26
+    - _Power: 3.24
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SUBSURFACE_SCATTERING: 1
-    - _Smoothness: 0.648
+    - _Smoothness: 0.778
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _Surface: 0
     - _THICKNESS_SOURCE: 1
-    - _Thickness_Max: 2.37
-    - _Thickness_Min: 1.28
+    - _Thickness_Max: 1.02
+    - _Thickness_Min: 0.54
     - _WorkflowMode: 1
     - _WrinkleIntensity: 1
     - _ZTest: 4
@@ -144,10 +144,10 @@ Material:
     - _ZWriteControl: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Color: {r: 0.26415092, g: 0.12086151, b: 0.12086151, a: 1}
+    - _Color: {r: 0.7924528, g: 0.3252047, b: 0.33233836, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _Tint: {r: 0.4433962, g: 0.2742296, b: 0.26561943, a: 1}
+    - _Tint: {r: 0.3679245, g: 0.3679245, b: 0.3679245, a: 1}
   m_BuildTextureStacks: []
 --- !u!114 &5049975573519275786
 MonoBehaviour:
