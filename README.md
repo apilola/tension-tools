@@ -32,8 +32,6 @@ Your projects package manifest should be located at YOUR_PROJECT_NAME/Packages/m
 - Unity may show warnings for undisposed Compute/Graphics Buffers.
     - Leak detection mode may be toggled through: Toolbar->TensionTools->LeakDetectionMode
     - On my machine, leak detection does not seem to be outputting any stack traces, feedback would be appreciated...
-- Inspector preview support only functions in using the URP scriptable renderpipline. 
-    - If anyone knows how to render a skinned mesh renderer with a replacement shader in a preview context that would be helpful.
 
 
 ### Contents
