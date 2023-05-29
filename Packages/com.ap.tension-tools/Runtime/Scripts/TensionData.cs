@@ -11,12 +11,18 @@ namespace TensionTools
     [RequireComponent(typeof(SkinnedMeshRenderer)), ExecuteAlways]
     public class TensionData : MonoBehaviour
     {
+        /// <summary>
+        /// The mode in which edge data is generated and stored.
+        /// </summary>
         public enum Mode
         {
             Baked,
             OnAwake,
         }
 
+        /// <summary>
+        /// A class that holds the properties for a specific tension mode.
+        /// </summary>
         [System.Serializable]
         public class Property
         {
@@ -32,6 +38,10 @@ namespace TensionTools
             private readonly int PowerProp;
             private readonly string ModeID;
 
+            /// <summary>
+            /// Creates a new property class for a specific tension mode.
+            /// </summary>
+            /// <param name="ModeID"></param>
             public Property(string ModeID)
             {
                 this.ModeID = ModeID;
@@ -45,6 +55,9 @@ namespace TensionTools
             [SerializeField, Min(.01f)] private float m_Power = 1;
             internal TensionData m_TensionData;
 
+            /// <summary>
+            /// The intensity of the squash/stretch applied to the mesh.
+            /// </summary>
             public float Intensity
             {
                 get => m_Intensity;
@@ -59,6 +72,9 @@ namespace TensionTools
                 }
             }
 
+            /// <summary>
+            /// The limit of the squash/stretch applied to the mesh.
+            /// </summary>
             public float Limit
             {
                 get => m_Limit;
@@ -73,6 +89,9 @@ namespace TensionTools
                 }
             }
 
+            /// <summary>
+            /// The power applied to the intensity of the squash/stretch.
+            /// </summary>
             public float Power
             {
                 get => m_Power;
@@ -87,17 +106,27 @@ namespace TensionTools
                 }
             }
 
+            /// <summary>
+            /// Applies the material properties to the material property block.
+            /// </summary>
             public void ApplyMaterialProperties()
             {
                 UpdateMaterialPropertyBlock(m_TensionData.m_MaterialPropertyBlock);
             }
 
+            /// <summary>
+            /// Applies the material properties to the material property block. Then applies the property block to the renderer.
+            /// </summary>
             public void ForceApplyMaterialProperties()
             {
                 UpdateMaterialPropertyBlock(m_TensionData.m_MaterialPropertyBlock);
                 m_TensionData.ForceMaterialPropertyBlockUpdate();
             }
 
+            /// <summary>
+            /// Applies the material properties to the material property block.
+            /// </summary>
+            /// <param name="propertyBlock"></param>
             public void UpdateMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)
             {
                 propertyBlock.SetFloat(IntensityProp, m_Intensity);
@@ -172,7 +201,7 @@ namespace TensionTools
 
         private void Awake()
         {
-
+            // This is to ensure that the component is torn down and set up properly when the assembly is reloaded.
 #if UNITY_EDITOR
             UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += TearDown;
 #endif
@@ -207,6 +236,7 @@ namespace TensionTools
                 Debug.LogError($"{nameof(TensionData)}:: Attempting to Update Vertex Buffer but the component failed to setup", this);
                 return;
             }
+            // when the object is rendered, we update the vertex buffer
             UpdateVertexBuffer();
         }
 
@@ -215,7 +245,9 @@ namespace TensionTools
             TearDown();
         }
 
-
+        /// <summary>
+        /// The params used by to drive tension in a shader.
+        /// </summary>
         public static class Params
         {
             public static readonly int EDGE_BUFFER = Shader.PropertyToID(nameof(_EdgeBuffer));
@@ -238,6 +270,10 @@ namespace TensionTools
             return mat != null;// && mat.HasBuffer(Params.EDGE_BUFFER) && mat.HasBuffer(Params.BASE_VERTEX_BUFFER) && mat.HasBuffer(Params.VERTEX_BUFFER) && mat.HasInt(Params.VERTEX_BUFFER_STRIDE);
         }
 
+        /// <summary>
+        /// Determines whether this component has all the required data to set itself up
+        /// </summary>
+        /// <returns></returns>
         bool CanSetUp()
         {
             if (m_SkinnedMeshRenderer == null)
@@ -249,8 +285,12 @@ namespace TensionTools
             return m_SkinnedMeshRenderer != null && m_SkinnedMeshRenderer.sharedMaterial != null && m_SkinnedMeshRenderer.sharedMesh != null && !isSetUp;
         }
 
+        /// <summary>
+        /// Sets up the component
+        /// </summary>
         private void SetUp()
         {
+            // if we can't set up, we don't do anything
             if (!CanSetUp() || isSetUp)
             {
                 return;
@@ -272,6 +312,11 @@ namespace TensionTools
             SetUp();
         }
 
+        /// <summary>
+        /// Gets the edge info for the mesh. The edge info is a list of edges and their deltas for each vertex on the mesh.
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
         private (int[] edges, Vector3[] edgeDeltas) GetEdgeInfo(Mesh mesh)
         {
 
@@ -283,6 +328,9 @@ namespace TensionTools
             return BakeMeshInfo(mesh);
         }
 
+        /// <summary>
+        /// Tears down the component
+        /// </summary>
         private void TearDown()
         {
             ReleaseBuffer(ref _EdgeBuffer);
@@ -291,6 +339,11 @@ namespace TensionTools
             isSetUp = false;
         }
 
+        /// <summary>
+        /// Called by the editor when the component needs to rebake its data
+        /// </summary>
+        /// <exception cref="UnityEngine.MissingComponentException"></exception>
+        /// <exception cref="UnityEngine.MissingReferenceException"></exception>
         [ContextMenu("Bake Mesh Info")]
         public void ForceBakeMeshInfo()
         {
@@ -320,6 +373,12 @@ namespace TensionTools
             }
         }
 
+        /// <summary>
+        /// Bakes the edges for the mesh
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
+        /// <exception cref="UnityEngine.MissingReferenceException"></exception>
         private (int[] edges, Vector3[] edgeDeltas) BakeMeshInfo(Mesh mesh)
         {
             if (mesh == null)
@@ -336,6 +395,15 @@ namespace TensionTools
             return (m_Edges, m_EdgeDeltas);
         }
 
+        /// <summary>
+        /// Sets up the material property block and is called when the component is set up and when the material property block needs to be updated
+        /// </summary>
+        /// <param name="vertexCount"></param>
+        /// <param name="squash"></param>
+        /// <param name="stretch"></param>
+        /// <param name="propertyBlock"></param>
+        /// <param name="edgeBuffer"></param>
+        /// <param name="baseEdgeBuffer"></param>
         private void SetUpMaterialPropertyBlock(int vertexCount, Property squash, Property stretch, MaterialPropertyBlock propertyBlock, ComputeBuffer edgeBuffer, ComputeBuffer baseEdgeBuffer)
         {
             propertyBlock.SetBuffer(Params.EDGE_BUFFER, edgeBuffer);
@@ -348,6 +416,11 @@ namespace TensionTools
             propertyBlock.SetFloat(Params.STRETCH_LIMIT, stretch.Limit);
         }
 
+        /// <summary>
+        /// Applies the vertex buffer to the material property block. This is called when the component is set up and when the renderer is about to be rendered
+        /// </summary>
+        /// <param name="propertyBlock"></param>
+        /// <param name="vertexBuffer"></param>
         private void ApplyVertexBufferToMaterialPropertyBlock(MaterialPropertyBlock propertyBlock, GraphicsBuffer vertexBuffer)
         {
             propertyBlock.SetInteger(Params.VERTEX_BUFFER_STRIDE, vertexBuffer.stride / 4);
@@ -355,6 +428,11 @@ namespace TensionTools
             propertyBlock.SetVector(Params.SCALE, transform.lossyScale);
         }
 
+        /// <summary>
+        /// Bakes the raw vertices for the mesh and is called when the component is set up and when the mesh needs to be rebaked
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <returns></returns>
         private static int[] BakeEdges(Mesh mesh)
         {
             int vertexCount = mesh.vertexCount;
@@ -402,6 +480,12 @@ namespace TensionTools
             return edgeData;
         }
 
+        /// <summary>
+        /// Bake the raw edge deltas for the mesh and is called when the bake mesh info is called
+        /// </summary>
+        /// <param name="mesh"></param>
+        /// <param name="edgeData"></param>
+        /// <returns></returns>
         private Vector3[] BakeRawVerts(Mesh mesh, int[] edgeData)
         {
             var vertexCount = mesh.vertexCount;
@@ -422,6 +506,11 @@ namespace TensionTools
             return edges;
         }
 
+        /// <summary>
+        /// Sets up the vertex buffer and is called when the component is set up
+        /// </summary>
+        /// <param name="skinnedMeshRenderer"></param>
+        /// <returns></returns>
         private GraphicsBuffer SetUpVertexBuffer(SkinnedMeshRenderer skinnedMeshRenderer)
         {
             skinnedMeshRenderer.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
@@ -429,6 +518,9 @@ namespace TensionTools
             return buffer;
         }
 
+        /// <summary>
+        /// Updates the current vertex buffer and is called when the renderer is about to be rendered
+        /// </summary>
         public void UpdateVertexBuffer()
         {
             ReleaseBuffer(ref _VertexBuffer);
@@ -441,11 +533,18 @@ namespace TensionTools
             }
         }
 
+        /// <summary>
+        /// Forces the material property block to update and can be called through a squash or stretch property
+        /// </summary>
         public void ForceMaterialPropertyBlockUpdate()
         {
             m_SkinnedMeshRenderer.SetPropertyBlock(m_MaterialPropertyBlock);
         }
 
+        /// <summary>
+        /// Gets the material property block used by this component
+        /// </summary>
+        /// <returns></returns>
         public MaterialPropertyBlock GetMaterialPropertyBlock()
         {
             if (m_MaterialPropertyBlock == null)
@@ -455,6 +554,9 @@ namespace TensionTools
             return m_MaterialPropertyBlock;
         }
 
+        /// <summary>
+        /// Called by the editor when previewing the component in the inspector. This is because the inspector does not call OnWillRenderObject
+        /// </summary>
         public void RevertToPreviousVertexBuffer()
         {
             ReleaseBuffer(ref _VertexBuffer);
@@ -467,12 +569,20 @@ namespace TensionTools
             }
         }
 
+        /// <summary>
+        /// helper method that releases a buffer
+        /// </summary>
+        /// <param name="buffer"></param>
         void ReleaseBuffer(ref ComputeBuffer buffer)
         {
             buffer?.Dispose();
             buffer = null;
         }
 
+        /// <summary>
+        /// helper method that releases a buffer
+        /// </summary>
+        /// <param name="buffer"></param>
         void ReleaseBuffer(ref GraphicsBuffer buffer)
         {
             buffer?.Dispose();
