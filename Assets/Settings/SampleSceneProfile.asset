@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SampleSceneProfile
   m_EditorClassIdentifier: 
   components:
-  - {fileID: 8511026084807306460}
   - {fileID: 849379129802519247}
+  - {fileID: 8511026084807306460}
   - {fileID: 4314526534169074544}
 --- !u!114 &849379129802519247
 MonoBehaviour:
